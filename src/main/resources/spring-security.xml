@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:security="http://www.springframework.org/schema/security"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+            http://www.springframework.org/schema/beans/spring-beans-4.2.xsd
+            http://www.springframework.org/schema/security
+            http://www.springframework.org/schema/security/spring-security-4.2.xsd">
+
+    <security:http>
+        <!-- 拦截资源 -->
+        <security:intercept-url pattern="/product/list" access="hasAuthority('ROLE_LIST_PRODUCT')"/>
+        <security:intercept-url pattern="/product/add" access="hasAuthority('ROLE_ADD_PRODUCT')"/>
+        <security:intercept-url pattern="/product/update" access="hasAuthority('ROLE_UPDATE_PRODUCT')"/>
+        <security:intercept-url pattern="/product/delete" access="hasAuthority('ROLE_DELETE_PRODUCT')"/>
+
+        <security:intercept-url pattern="/userLogin" access="permitAll()"/>
+        <security:intercept-url pattern="/js/**" access="permitAll()"/>
+        <security:intercept-url pattern="/imageCode*" access="permitAll()"/>
+        <security:intercept-url pattern="/product/index" access="permitAll()"/>
+        <security:intercept-url pattern="/**" access="isFullyAuthenticated()"/>
+
+        <!-- 自定义Spring Security过滤器 -->
+        <security:custom-filter ref="imageCodeAuthenticationFilter" before="FORM_LOGIN_FILTER"/>
+
+        <security:form-login login-page="/userLogin" authentication-success-handler-ref="myAuthenticationnSuccessHandler" authentication-failure-handler-ref="myAuthenticationFailureHandler"/>
+        <!-- 权限不足处理 -->
+        <security:access-denied-handler error-page="/error"/>
+
+        <security:csrf disabled="true"/>
+
+        <!-- 加上rememberMe功能 -->
+        <!-- token-validity-seconds: 有效秒数 -->
+        <security:remember-me token-repository-ref="jdbcTokenRepository" token-validity-seconds="3600"/>
+    </security:http>
+
+    <security:authentication-manager>
+        <security:authentication-provider user-service-ref="myUserDetailSerivce">
+            <!--使用加密算法对用户输入的密码进入加密，然后和数据库的密码进行配对 -->
+            <security:password-encoder ref="passwordEncoder"/>
+        </security:authentication-provider>
+    </security:authentication-manager>
+
+    <bean id="myUserDetailSerivce" class="cn.sm1234.security.MyUserDetailService"/>
+
+    <bean id="myAuthenticationnSuccessHandler" class="cn.sm1234.security.MyAuthenticationnSuccessHandler"/>
+    <bean id="myAuthenticationFailureHandler" class="cn.sm1234.security.MyAuthenticationFailureHandler"/>
+
+    <bean id="passwordEncoder" class="org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder"/>
+
+    <bean id="imageCodeAuthenticationFilter" class="cn.sm1234.security.ImageCodeAuthenticationFilter">
+        <property name="authenticationFailureHandler" ref="myAuthenticationFailureHandler"/>
+    </bean>
+
+    <bean id="jdbcTokenRepository" class="org.springframework.security.web.authentication.rememberme.JdbcTokenRepositoryImpl">
+        <property name="dataSource" ref="dataSource"/>
+        <property name="createTableOnStartup" value="true"/>
+    </bean>
+</beans>
